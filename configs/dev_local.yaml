@@ -1,0 +1,30 @@
+# Laptop smoke-test only — never use its metrics in the dissertation.
+model: {name: Qwen/Qwen3-1.7B, enable_thinking: false, attn_impl: sdpa}
+seed: 42
+paths:
+  raw: data/raw
+  processed: data/processed
+  eval: data/eval
+  results: results/dev_local
+  sft_adapter: models/dev_sft_adapter
+  dpo_adapter: models/dev_dpo_adapter
+labels: {0: negative, 1: neutral, 2: positive}
+instruction: "What is the sentiment of this financial text? Answer with one of: negative, neutral, positive."
+answer_format: "Sentiment: {label}"
+quant: {load_in_4bit: true, quant_type: nf4, double_quant: true, compute_dtype: float16}
+sft:
+  data: {dedupe_on_input: true, group_split: true, remove_phrasebank_overlap: true, train_size: 300, val_size: 60, stratified: true, fuzzy_threshold: 95}
+  lora: {r: 8, alpha: 16, dropout: 0.05, target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]}
+  train: {lr: 2.0e-4, scheduler: cosine, warmup_ratio: 0.03, epochs: 1, per_device_batch: 1, grad_accum: 8, max_seq_length: 128, weight_decay: 0.01, max_grad_norm: 1.0, optim: paged_adamw_32bit, gradient_checkpointing: true, eval_steps: 25, save_best_by: eval_loss, completion_only_loss: true}
+dpo:
+  data: {dedupe_pairs: true, max_pairs_per_prompt: 1, max_prompt_length: 128, max_length: 256}
+  lora: {r: 8, alpha: 16, dropout: 0.05}
+  train: {beta: 0.1, lr: 5.0e-6, scheduler: cosine, warmup_ratio: 0.1, per_device_batch: 1, grad_accum: 8, max_steps: 20, gradient_checkpointing: true}
+  stop_rule: "Development run only; do not compare with Colab results."
+eval:
+  generation: {do_sample: false, max_new_tokens: 12, batch_size: 4}
+  few_shot_k: 5
+  bootstrap_samples: 100
+  paraphrase_prompts: 1
+  label_scoring_mode: true
+ablations: {rank: [8], targets: [all_7], train_size: [300], lr: [2.0e-4]}

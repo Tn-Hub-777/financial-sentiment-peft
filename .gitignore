@@ -1,0 +1,24 @@
+# environments and caches
+.venv/
+__pycache__/
+.pytest_cache/
+.ipynb_checkpoints/
+.cache/
+
+# large or regenerable files
+data/raw/*
+models/
+checkpoints/
+merged_models/
+wandb/
+*.safetensors
+*.bin
+*.gguf
+
+# secrets
+.env
+*token*
+*.key
+
+# keep the empty folder
+!data/raw/.gitkeep
